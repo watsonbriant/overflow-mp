@@ -90,6 +90,32 @@ Run `src/audit-contacts.ts` before any live run. On 2026-08-12 it caught five
 same-name/different-email donors; four were confirmed by phone and are now
 matched automatically, one (`Abigail Croom`) needs a human decision.
 
+## Hosting the preview (Netlify)
+
+The preview renders real donor names, email addresses, and gift amounts. It must
+never be openly reachable.
+
+`netlify/edge-functions/basic-auth.ts` gates the whole site behind HTTP Basic
+Auth on any Netlify plan. Required Netlify environment variables:
+
+| Key | Notes |
+|---|---|
+| `PREVIEW_PASSWORD` | the shared password; **required** — without it the site locks, not opens |
+| `PREVIEW_USER` | optional; any username is accepted when unset |
+| `MP_DOMAIN`, `MP_CLIENT_ID`, `MP_CLIENT_SECRET` | as in `.env` |
+| `OVERFLOW_BASE`, `OVERFLOW_CLIENT_ID`, `OVERFLOW_API_KEY` | as in `.env` |
+| `MP_HOUSEHOLD_SOURCE_ID`, `SYNC_FROM_DATE` | optional; sensible defaults in code |
+
+`.env` is gitignored and therefore absent on Netlify — the platform's own
+environment variables are the only source there. Two deploy-only pitfalls that
+are invisible locally, both already fixed, worth not reintroducing:
+
+- Never reference `.env` via `new URL('…', import.meta.url)`. Turbopack resolves
+  that statically as an asset and the **build fails** when the file is absent.
+  Build the path at runtime instead.
+- Read `config/fund-mapping.json` via a JSON **import**, not `fs` + `cwd`. A
+  bundled serverless function has no reliable working directory.
+
 ## Not yet implemented: batches and deposits
 
 Contributions post with `Batch_ID: null`, matching how OnlineGiving.org
