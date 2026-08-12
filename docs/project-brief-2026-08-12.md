@@ -24,9 +24,9 @@ stakeholder approval.
 | Overflow API access | Complete, verified |
 | Fund and campus mapping (all 24 combinations) | Complete, built from live data |
 | Sync engine | Complete, dry-run clean |
-| Stakeholder preview website | Complete, running locally |
+| Stakeholder preview website | Complete |
 | **Writes to MinistryPlatform** | **None. Zero records created or modified.** |
-| Deployment to a hosted URL | Not done |
+| Hosted on Netlify, password protected | Deployed 12 Aug 2026 |
 | Batches / bank deposit reconciliation | Deliberately deferred — see §8 |
 | Automatic scheduling | Not yet decided |
 
@@ -55,6 +55,7 @@ stakeholder approval.
 | Overflow API docs | `docs.overflow.co` | Reference |
 | MinistryPlatform docs | `help.acst.com`, `kb.ministryplatform.com` | Reference |
 | Code repository | `github.com/watsonbriant/overflow-mp` (**private**) | Version control |
+| Netlify | preview site (**password protected**) | Hosting for stakeholder review |
 
 ## 5. What we created in MinistryPlatform
 
@@ -248,9 +249,13 @@ live. Contents:
   fund, payment type, whether the contact is new
 - A banner stating that nothing has been written
 
-Built with Next.js. Currently local only. **If it is hosted so stakeholders can
-reach it, access protection must be enabled before the first deploy — the page
-displays real donor names, email addresses, and gift amounts.**
+Built with Next.js and hosted on Netlify. **The site is password protected.**
+Because the page displays real donor names, email addresses, and gift amounts, a
+gate runs ahead of every request and denies access by default — if the password
+is ever unset or misconfigured, the site locks rather than exposing data. The
+password is stored in Netlify's environment, not in the codebase.
+
+Please do not forward the URL and password outside this stakeholder group.
 
 ## 12. Open items and ownership
 
@@ -262,8 +267,7 @@ displays real donor names, email addresses, and gift amounts.**
 | 4 | Clean up duplicate tithe funds in Overflow | Whoever administers Overflow |
 | 5 | Merge the five duplicate contacts in MP after the first run | Church database staff |
 | 6 | Choose where the sync runs on a schedule | Technical |
-| 7 | Host the preview with access protection, if remote review is wanted | Technical |
-| 8 | First live run — a single gift, inspected in MP before opening up | Technical |
+| 7 | First live run — a single gift, inspected in MP before opening up | Technical |
 
 ## 13. Credentials — location, not values
 
