@@ -1,0 +1,18 @@
+# secrets & local state
+.env
+.env.local
+state/
+
+# next
+.next/
+out/
+next-env.d.ts
+.vercel
+*.tsbuildinfo
+
+# node
+node_modules/
+npm-debug.log*
+
+*.log
+.DS_Store

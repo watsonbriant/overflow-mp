@@ -1,0 +1,83 @@
+@import "tailwindcss";
+
+/*
+ * Palette per the data-viz reference instance. Light values live on bare :root;
+ * dark values are declared under BOTH the OS media query and the [data-theme]
+ * scope so an explicit toggle wins in either direction.
+ */
+:root {
+  color-scheme: light;
+
+  --plane: #f9f9f7;          /* page background */
+  --surface: #fcfcfb;        /* card / chart surface */
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --ink-muted: #898781;
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --hairline: rgba(11, 11, 11, 0.10);
+
+  --series: #2a78d6;         /* single sequential hue — validated vs #fcfcfb */
+  --series-wash: rgba(42, 120, 214, 0.10);
+
+  --good: #0ca30c;
+  --warning: #fab219;
+  --critical: #d03b3b;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+
+    --plane: #0d0d0d;
+    --surface: #1a1a19;
+    --ink: #ffffff;
+    --ink-2: #c3c2b7;
+    --ink-muted: #898781;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --hairline: rgba(255, 255, 255, 0.10);
+
+    --series: #3987e5;       /* dark step — validated vs #1a1a19 */
+    --series-wash: rgba(57, 135, 229, 0.14);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --plane: #0d0d0d;
+  --surface: #1a1a19;
+  --ink: #ffffff;
+  --ink-2: #c3c2b7;
+  --ink-muted: #898781;
+  --grid: #2c2c2a;
+  --axis: #383835;
+  --hairline: rgba(255, 255, 255, 0.10);
+
+  --series: #3987e5;
+  --series-wash: rgba(57, 135, 229, 0.14);
+}
+
+@theme inline {
+  --color-plane: var(--plane);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-muted: var(--ink-muted);
+  --color-grid: var(--grid);
+  --color-axis: var(--axis);
+  --color-series: var(--series);
+  --color-good: var(--good);
+  --color-warning: var(--warning);
+  --color-critical: var(--critical);
+}
+
+body {
+  background: var(--plane);
+  color: var(--ink);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+/* Columns of figures align; large standalone values stay proportional. */
+.tnum { font-variant-numeric: tabular-nums; }

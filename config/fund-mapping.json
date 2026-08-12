@@ -1,0 +1,89 @@
+{
+  "_comment": "Overflow (campaign + subcampaign) -> MinistryPlatform Program. Campaign carries the campus; subcampaign carries the fund. Keyed on BOTH because 4 subcampaign ids are shared across all campaigns. Generated 2026-08-12 from live data; see MAPPING.md for open questions.",
+
+  "campuses": {
+    "69f4be2c22e5e08c84c91381": { "overflow": "Ballantyne Campus",  "congregationId": 7 },
+    "69f4be22a651b31f9dd403a3": { "overflow": "Lake Norman Campus", "congregationId": 4 },
+    "69f4bd5fce08bf73b343a9e3": { "overflow": "Central Campus",     "congregationId": 1 },
+    "69f4b858ed36d2f4344df703": { "overflow": "South End Campus",   "congregationId": 5 }
+  },
+
+  "sharedSubcampaigns": {
+    "_comment": "Same id under every campaign — campus MUST come from the campaign, never these.",
+    "69f76bc0fd8f2ffb006b66be": "General Fund (Tithe)",
+    "69f76bd2b5daffe95c8863cf": "Liberty",
+    "69f76bf5fd8f2ffb006b67f1": "Outreach + Missions",
+    "69f76c00fb4bc8cc3bdf4b12": "Freedom Academy"
+  },
+
+  "funds": [
+    { "campaign": "Ballantyne Campus",  "campaignId": "69f4be2c22e5e08c84c91381", "subcampaign": "Ballantyne General Fund (Tithe)",     "subcampaignId": "6a2861dce7d87a6071f32655", "programId": 213, "programName": "Ballantyne General Fund (Tithe)",   "congregationId": 7 },
+    { "campaign": "Ballantyne Campus",  "campaignId": "69f4be2c22e5e08c84c91381", "subcampaign": "General Fund (Tithe)",                "subcampaignId": "69f76bc0fd8f2ffb006b66be", "programId": 213, "programName": "Ballantyne General Fund (Tithe)",   "congregationId": 7, "note": "generic tithe fund, same destination as campus-specific one" },
+    { "campaign": "Ballantyne Campus",  "campaignId": "69f4be2c22e5e08c84c91381", "subcampaign": "Ballantyne Kingdom Builders '25-'26", "subcampaignId": "6a2862022501128d662b38f6", "programId": 199, "programName": "Ballantyne Kingdom Builders '25-'26", "congregationId": 7, "programEndDate": "2027-03-01" },
+    { "campaign": "Ballantyne Campus",  "campaignId": "69f4be2c22e5e08c84c91381", "subcampaign": "Liberty",                             "subcampaignId": "69f76bd2b5daffe95c8863cf", "programId": 215, "programName": "Liberty 2026",                       "congregationId": 7, "programEndDate": "2027-02-12" },
+    { "campaign": "Ballantyne Campus",  "campaignId": "69f4be2c22e5e08c84c91381", "subcampaign": "Freedom Academy",                     "subcampaignId": "69f76c00fb4bc8cc3bdf4b12", "programId": 32,  "programName": "Freedom Academy, NC",                 "congregationId": 1, "note": "DECIDED 2026-08-12: one churchwide program; campus attribution intentionally not preserved"},
+    { "campaign": "Ballantyne Campus",  "campaignId": "69f4be2c22e5e08c84c91381", "subcampaign": "Outreach + Missions",                 "subcampaignId": "69f76bf5fd8f2ffb006b67f1", "programId": 55,  "programName": "Outreach/Missions",                   "congregationId": 6, "note": "DECIDED 2026-08-12: one churchwide program; campus attribution intentionally not preserved"},
+
+    { "campaign": "Lake Norman Campus", "campaignId": "69f4be22a651b31f9dd403a3", "subcampaign": "LKN General Fund (Tithe)",             "subcampaignId": "6a2861c8334614da6bc72ef1", "programId": 50,  "programName": "LKN General Fund (tithe)",            "congregationId": 4 },
+    { "campaign": "Lake Norman Campus", "campaignId": "69f4be22a651b31f9dd403a3", "subcampaign": "General Fund (Tithe)",                "subcampaignId": "69f76bc0fd8f2ffb006b66be", "programId": 50,  "programName": "LKN General Fund (tithe)",            "congregationId": 4, "note": "generic tithe fund, same destination as campus-specific one" },
+    { "campaign": "Lake Norman Campus", "campaignId": "69f4be22a651b31f9dd403a3", "subcampaign": "LKN Kingdom Builders '25-'26",        "subcampaignId": "6a28621424712d1b7c2c66a2", "programId": 196, "programName": "LKN Kingdom Builders '25-'26",        "congregationId": 4, "programEndDate": "2027-03-01" },
+    { "campaign": "Lake Norman Campus", "campaignId": "69f4be22a651b31f9dd403a3", "subcampaign": "Liberty",                             "subcampaignId": "69f76bd2b5daffe95c8863cf", "programId": 211, "programName": "Liberty 2026",                       "congregationId": 4, "programEndDate": "2027-02-12" },
+    { "campaign": "Lake Norman Campus", "campaignId": "69f4be22a651b31f9dd403a3", "subcampaign": "Freedom Academy",                     "subcampaignId": "69f76c00fb4bc8cc3bdf4b12", "programId": 32,  "programName": "Freedom Academy, NC",                 "congregationId": 1, "note": "DECIDED 2026-08-12: one churchwide program; campus attribution intentionally not preserved"},
+    { "campaign": "Lake Norman Campus", "campaignId": "69f4be22a651b31f9dd403a3", "subcampaign": "Outreach + Missions",                 "subcampaignId": "69f76bf5fd8f2ffb006b67f1", "programId": 55,  "programName": "Outreach/Missions",                   "congregationId": 6, "note": "DECIDED 2026-08-12: one churchwide program; campus attribution intentionally not preserved"},
+
+    { "campaign": "Central Campus",     "campaignId": "69f4bd5fce08bf73b343a9e3", "subcampaign": "Central General Fund (Tithe)",        "subcampaignId": "6a2861b0e7d87a6071f325ea", "programId": 6,   "programName": "Central General Fund (Tithe)",        "congregationId": 1 },
+    { "campaign": "Central Campus",     "campaignId": "69f4bd5fce08bf73b343a9e3", "subcampaign": "General Fund (Tithe)",                "subcampaignId": "69f76bc0fd8f2ffb006b66be", "programId": 6,   "programName": "Central General Fund (Tithe)",        "congregationId": 1, "note": "generic tithe fund, same destination as campus-specific one" },
+    { "campaign": "Central Campus",     "campaignId": "69f4bd5fce08bf73b343a9e3", "subcampaign": "Central Kingdom Builders '25-'26",    "subcampaignId": "69f76bc8390fae66881be24e", "programId": 195, "programName": "Central Kingdom Builders '25-'26",    "congregationId": 1, "programEndDate": "2027-03-01" },
+    { "campaign": "Central Campus",     "campaignId": "69f4bd5fce08bf73b343a9e3", "subcampaign": "Liberty",                             "subcampaignId": "69f76bd2b5daffe95c8863cf", "programId": 209, "programName": "Liberty 2026",                       "congregationId": 1, "programEndDate": "2027-02-12" },
+    { "campaign": "Central Campus",     "campaignId": "69f4bd5fce08bf73b343a9e3", "subcampaign": "Freedom Academy",                     "subcampaignId": "69f76c00fb4bc8cc3bdf4b12", "programId": 32,  "programName": "Freedom Academy, NC",                 "congregationId": 1 },
+    { "campaign": "Central Campus",     "campaignId": "69f4bd5fce08bf73b343a9e3", "subcampaign": "Outreach + Missions",                 "subcampaignId": "69f76bf5fd8f2ffb006b67f1", "programId": 55,  "programName": "Outreach/Missions",                   "congregationId": 6, "note": "DECIDED 2026-08-12: one churchwide program; campus attribution intentionally not preserved"},
+
+    { "campaign": "South End Campus",   "campaignId": "69f4b858ed36d2f4344df703", "subcampaign": "SE General Fund (Tithe)",             "subcampaignId": "6a2861bde7d87a6071f32601", "programId": 81,  "programName": "SE General Fund (tithe)",             "congregationId": 5 },
+    { "campaign": "South End Campus",   "campaignId": "69f4b858ed36d2f4344df703", "subcampaign": "General Fund (Tithe)",                "subcampaignId": "69f76bc0fd8f2ffb006b66be", "programId": 81,  "programName": "SE General Fund (tithe)",             "congregationId": 5, "note": "generic tithe fund — currently receives MOST South End tithe traffic" },
+    { "campaign": "South End Campus",   "campaignId": "69f4b858ed36d2f4344df703", "subcampaign": "SE Kingdom Builders '25-'26",         "subcampaignId": "6a2862202501128d662b392b", "programId": 198, "programName": "SE Kingdom Builders '25-'26",         "congregationId": 5, "programEndDate": "2027-03-01" },
+    { "campaign": "South End Campus",   "campaignId": "69f4b858ed36d2f4344df703", "subcampaign": "Liberty",                             "subcampaignId": "69f76bd2b5daffe95c8863cf", "programId": 210, "programName": "Liberty 2026",                       "congregationId": 5, "programEndDate": "2027-02-12" },
+    { "campaign": "South End Campus",   "campaignId": "69f4b858ed36d2f4344df703", "subcampaign": "Freedom Academy",                     "subcampaignId": "69f76c00fb4bc8cc3bdf4b12", "programId": 32,  "programName": "Freedom Academy, NC",                 "congregationId": 1, "note": "DECIDED 2026-08-12: one churchwide program; campus attribution intentionally not preserved"},
+    { "campaign": "South End Campus",   "campaignId": "69f4b858ed36d2f4344df703", "subcampaign": "Outreach + Missions",                 "subcampaignId": "69f76bf5fd8f2ffb006b67f1", "programId": 55,  "programName": "Outreach/Missions",                   "congregationId": 6, "note": "DECIDED 2026-08-12: one churchwide program; campus attribution intentionally not preserved"}
+  ],
+
+  "paymentTypes": {
+    "_comment": "MP Payment_Type_ID. Overflow sends paymentMethod.type as a display string (observed: 'Apple Pay', 'Google Pay'), and type as the asset class.",
+    "byPaymentMethod": {
+      "Apple Pay": 4,
+      "Google Pay": 4,
+      "Visa": 4,
+      "Mastercard": 4,
+      "Amex": 4,
+      "Discover": 4,
+      "Card": 4,
+      "Bank": 5,
+      "ACH": 5
+    },
+    "byAssetType": {
+      "STOCK": 6,
+      "CRYPTO": 6,
+      "DAF": null,
+      "MANUAL_CASH": 2
+    },
+    "fallback": null,
+    "_fallbackNote": "null = fail loudly. Never guess a payment type; a wrong one corrupts finance reporting silently.",
+    "names": {
+      "1": "Check",
+      "2": "Cash",
+      "3": "Coin",
+      "4": "Credit Card",
+      "5": "ACH/EFT",
+      "6": "Non-Cash/Asset"
+    }
+  },
+
+  "syncPolicy": {
+    "onlySyncStatusBucket": "CONFIRMED",
+    "invoiceNumberPrefix": "OF",
+    "idempotencyField": "Transaction_Code",
+    "batchNamePattern": "Overflow {method} Batch {MM-DD-YYYY}",
+    "contactSource": "Overflow",
+    "failOnEndedProgram": true,
+    "failOnUnmappedFund": true
+  }
+}

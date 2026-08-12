@@ -1,0 +1,33 @@
+{
+  "name": "overflow-mp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Overflow.co → Freedom House MinistryPlatform giving sync, with a stakeholder preview UI",
+  "engines": { "node": ">=23" },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "sync": "node src/cli.ts",
+    "dry": "node src/cli.ts --dry-run --all",
+    "audit": "node src/audit-contacts.ts",
+    "verify": "bash scripts/verify-mp.sh"
+  },
+  "dependencies": {
+    "next": "16.3.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.0",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
