@@ -33,5 +33,7 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules"]
+  // netlify/edge-functions run on Deno at the edge, not Node — their globals
+  // aren't in this project's lib, so Next's typecheck must not include them.
+  "exclude": ["node_modules", "netlify"]
 }

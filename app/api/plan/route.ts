@@ -6,11 +6,15 @@ export const runtime = 'nodejs';
 // Every request re-reads live data; a cached preview would mislead stakeholders.
 export const dynamic = 'force-dynamic';
 
+/** Far enough back to cover all Overflow history; the account began in 2026. */
+const LIFETIME = '2000-01-01T00:00:00Z';
+
 export async function GET(request: Request): Promise<NextResponse> {
-  const since = new URL(request.url).searchParams.get('since') ?? undefined;
+  const params = new URL(request.url).searchParams;
+  const from = params.get('range') === 'lifetime' ? LIFETIME : (params.get('from') ?? undefined);
 
   try {
-    const plan = await buildPlan(since);
+    const plan = await buildPlan({ from });
     return NextResponse.json(plan, {
       headers: { 'Cache-Control': 'no-store' },
     });

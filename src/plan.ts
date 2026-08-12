@@ -50,13 +50,25 @@ export interface PlanRow {
 
   action: Action;
   existingDonationId: number | null;
+  /**
+   * Why a gift is being skipped. 'synced' = this sync already wrote it.
+   * 'hand-entered' = staff keyed it in manually, detected by donor + amount +
+   * date, since a hand-entered donation carries no Overflow contribution id.
+   */
+  skipReason: 'synced' | 'hand-entered' | null;
+  existingBatchName: string | null;
   problem: string | null;
 }
 
 export interface Plan {
   generatedAt: string;
   since: string;
+  /** Earliest contribution date included in THIS view. */
+  from: string;
+  /** The floor the sync enforces, independent of this view. */
   syncFromDate: string;
+  /** True when this view reaches further back than the sync would actually go. */
+  beyondSyncFloor: boolean;
   rows: PlanRow[];
   totals: {
     count: number;
@@ -64,6 +76,9 @@ export interface Plan {
     toCreate: number;
     toCreateAmount: number;
     alreadyInMp: number;
+    /** Subset of alreadyInMp that staff entered by hand, not via this sync. */
+    alreadyHandEntered: number;
+    alreadyHandEnteredAmount: number;
     blocked: number;
     newContacts: number;
     newDonorRecords: number;
@@ -140,6 +155,91 @@ async function contactsByEmail(emails: string[]): Promise<Map<string, number>> {
   return found;
 }
 
+/**
+ * Finds Overflow gifts that staff already keyed into MP by hand.
+ *
+ * The sync's duplicate guard reads the Overflow contribution id out of
+ * Transaction_Code, which a hand-entered donation does not have — so without
+ * this, the preview would report money as "to transfer" that is already sitting
+ * in MinistryPlatform. As of Aug 2026 the team had entered 125 such gifts, in
+ * 15 batches, totalling $17,773.24 and running 2026-05-21 → 2026-08-02.
+ *
+ * Matches against the donations sitting in MP's manual "<date> Overflow"
+ * batches, on amount + date within a few days (manual entry often uses the
+ * service or deposit date rather than the gift date).
+ *
+ * ASSUMPTION: those batches keep "Overflow" in their name. If the team renames
+ * them, detection quietly stops finding duplicates — so SYNC_FROM_DATE, not
+ * this, is the real safety mechanism. This exists to keep the preview honest.
+ */
+async function handEnteredMatches(
+  contributions: OverflowContribution[],
+  ourTransactionCodes: Set<string>,
+): Promise<Map<string, { donationId: number; batchId: number | null; batchName: string | null }>> {
+  const DAY = 86_400_000;
+  const TOLERANCE = 4 * DAY;
+  const out = new Map<
+    string,
+    { donationId: number; batchId: number | null; batchName: string | null }
+  >();
+
+  // The team names every manual batch "<date> Overflow", so the batches are a
+  // far better source than donor matching: they cover gifts posted under donors
+  // whose email we cannot match (37 of 81 as of Aug 2026), which a donor-scoped
+  // search structurally cannot see.
+  const batches = await mp.select<{ Batch_ID: number; Batch_Name: string | null }>(
+    'Batches',
+    `$select=Batch_ID,Batch_Name&$filter=${encodeURIComponent(
+      "Batch_Name like '%Overflow%'",
+    )}&$top=500`,
+  );
+  if (batches.length === 0) return out;
+
+  const batchName = new Map(batches.map((b) => [b.Batch_ID, b.Batch_Name]));
+
+  interface Row {
+    Donation_ID: number;
+    Donation_Amount: number;
+    Donation_Date: string;
+    Transaction_Code: string | null;
+    Batch_ID: number | null;
+  }
+
+  const pool: Row[] = [];
+  for (const group of chunk([...batchName.keys()], 60)) {
+    const rows = await mp.select<Row>(
+      'Donations',
+      `$select=Donation_ID,Donation_Amount,Donation_Date,Transaction_Code,Batch_ID` +
+        `&$filter=${encodeURIComponent(`Batch_ID in (${group.join(',')})`)}&$top=5000`,
+    );
+    pool.push(...rows);
+  }
+
+  // Match on amount + date, consuming each MP donation at most once so two gifts
+  // of the same amount on the same day cannot both claim one donation.
+  const claimed = new Set<number>();
+  for (const c of contributions) {
+    const target = new Date(c.contributionDate).getTime();
+    const hit = pool.find(
+      (d) =>
+        !claimed.has(d.Donation_ID) &&
+        Math.abs(d.Donation_Amount - c.amount) < 0.005 &&
+        Math.abs(new Date(d.Donation_Date).getTime() - target) <= TOLERANCE &&
+        !(d.Transaction_Code && ourTransactionCodes.has(d.Transaction_Code)),
+    );
+    if (hit) {
+      claimed.add(hit.Donation_ID);
+      out.set(c.id, {
+        donationId: hit.Donation_ID,
+        batchId: hit.Batch_ID,
+        batchName: hit.Batch_ID !== null ? (batchName.get(hit.Batch_ID) ?? null) : null,
+      });
+    }
+  }
+  return out;
+}
+
+
 async function donorsByContact(contactIds: number[]): Promise<Map<number, number>> {
   const found = new Map<number, number>();
   for (const group of chunk(contactIds, 80)) {
@@ -154,9 +254,20 @@ async function donorsByContact(contactIds: number[]): Promise<Map<number, number
   return found;
 }
 
-export async function buildPlan(sinceIso?: string): Promise<Plan> {
-  const since = sinceIso ?? config.syncFromDate;
-  const floor = new Date(config.syncFromDate).getTime();
+export interface PlanOptions {
+  /**
+   * Earliest contribution date to include. Defaults to SYNC_FROM_DATE, which is
+   * the floor the sync itself enforces. The preview may look further back to
+   * show stakeholders the full history — viewing lifetime data is safe, syncing
+   * it is a separate decision (see README).
+   */
+  from?: string;
+}
+
+export async function buildPlan(opts: PlanOptions = {}): Promise<Plan> {
+  const from = opts.from ?? config.syncFromDate;
+  const since = from;
+  const floor = new Date(from).getTime();
 
   const [contributions, campuses] = await Promise.all([
     overflow.contributions(since),
@@ -182,7 +293,15 @@ export async function buildPlan(sinceIso?: string): Promise<Plan> {
 
   const donors = await donorsByContact([...new Set(contacts.values())]);
 
-  const rows = inScope.map((c) => planOne(c, campuses, donations, contacts, donors));
+  const donorIdFor = (c: OverflowContribution): number | null => {
+    const email = c.donor?.email?.trim().toLowerCase();
+    const contactId = email ? contacts.get(email) : undefined;
+    return contactId === undefined ? null : (donors.get(contactId) ?? null);
+  };
+
+  const manual = await handEnteredMatches(inScope, new Set(inScope.map((c) => c.id)));
+
+  const rows = inScope.map((c) => planOne(c, campuses, donations, contacts, donors, manual));
 
   // A donor giving twice needs one new contact, not two.
   const emailsNeedingContact = new Set(
@@ -224,7 +343,10 @@ export async function buildPlan(sinceIso?: string): Promise<Plan> {
   return {
     generatedAt: new Date().toISOString(),
     since,
+    from,
+    /** The floor the sync enforces, regardless of what this preview is showing. */
     syncFromDate: config.syncFromDate,
+    beyondSyncFloor: new Date(from).getTime() < new Date(config.syncFromDate).getTime(),
     rows,
     totals: {
       count: rows.length,
@@ -232,6 +354,10 @@ export async function buildPlan(sinceIso?: string): Promise<Plan> {
       toCreate: toCreate.length,
       toCreateAmount: round(toCreate.reduce((s, r) => s + r.amount, 0)),
       alreadyInMp: rows.filter((r) => r.action === 'skip').length,
+      alreadyHandEntered: rows.filter((r) => r.skipReason === 'hand-entered').length,
+      alreadyHandEnteredAmount: round(
+        rows.filter((r) => r.skipReason === 'hand-entered').reduce((s, r) => s + r.amount, 0),
+      ),
       blocked: rows.filter((r) => r.action === 'blocked').length,
       newContacts: emailsNeedingContact.size,
       newDonorRecords: contactsNeedingDonor.size,
@@ -258,6 +384,7 @@ function planOne(
   donations: Map<string, number>,
   contacts: Map<string, number>,
   donors: Map<number, number>,
+  manual: Map<string, { donationId: number; batchId: number | null; batchName: string | null }>,
 ): PlanRow {
   const donorName =
     [c.donor?.firstName, c.donor?.lastName].filter(Boolean).join(' ') || '(unnamed)';
@@ -287,6 +414,8 @@ function planOne(
     donorAction: null,
     action: 'create',
     existingDonationId: null,
+    skipReason: null,
+    existingBatchName: null,
     problem: null,
   };
 
@@ -316,6 +445,19 @@ function planOne(
   if (existing !== undefined) {
     row.existingDonationId = existing;
     row.action = 'skip';
+    row.skipReason = 'synced';
+    return row;
+  }
+
+  // Keyed in by staff before the sync existed — already in MP despite carrying
+  // no Overflow id, so transferring it would double-post real money.
+  const byHand = manual.get(c.id);
+  if (byHand) {
+    row.existingDonationId = byHand.donationId;
+    row.action = 'skip';
+    row.skipReason = 'hand-entered';
+    row.existingBatchName =
+      byHand.batchName ?? (byHand.batchId !== null ? `Batch ${byHand.batchId}` : null);
     return row;
   }
 

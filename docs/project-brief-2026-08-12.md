@@ -34,16 +34,21 @@ stakeholder approval.
 
 | Measure | Value |
 |---|---|
-| Gifts ready to transfer | 33 |
-| Total value | $2,960.00 |
-| Date range | 1 Aug 2026 onward |
-| Already in MinistryPlatform (would be skipped) | 0 |
+| **Gifts ready to transfer** | **20** |
+| **Total value** | **$1,768.00** |
+| Date range | 3 Aug 2026 onward — after the manual-entry cutoff (see §9) |
 | Blocked / needing a human decision | 0 |
-| New donor records to create in MP | 3 |
-| New people (contacts) to create in MP | 10 |
+| New donor records to create in MP | 2 |
+| New people (contacts) to create in MP | 9 |
+| Already entered by hand by staff, deliberately excluded | 125 gifts, $17,773.24, in 15 batches |
 | Overflow contributions on record, all time | 145 |
 | Overflow bank payouts on record | 16 |
 | Existing contacts in MinistryPlatform | ~118,000 |
+
+The preview also offers an **all-history** view for context. It reports 49 gifts
+($3,810.70) that appear absent from MinistryPlatform across all Overflow history —
+but only 20 of those ($1,768.00) fall after the manual-entry cutoff. The
+difference is covered in §9, item 1.
 
 ## 4. Systems and resources used
 
@@ -182,27 +187,63 @@ bank is worse than no batch. **Open question for finance: how should Overflow's
 processing fees be represented?** Gifts post correctly without batches in the
 meantime; donor records and statements work.
 
-**A hard start date is enforced.** Gifts dated before 1 Aug 2026 are ignored
-entirely, so nothing already posted by OnlineGiving.org can be duplicated.
+**A hard start date is enforced: 3 August 2026.** Gifts dated earlier are ignored
+entirely. This is the single most important safety setting in the project,
+because it is what prevents re-posting the 125 gifts the finance team already
+entered by hand. It must be revisited if manual entry continues — see §9.
 
 ## 9. Findings that warrant stakeholder attention
 
-**Ballantyne's books understate its giving.** Ballantyne generates the most gifts
-of any campus (11 gifts, $643) but only $308 books to it. Across all campuses,
-**$560 of $2,960 — 9 of 33 gifts — books to a different campus than it was given
-at**, because Freedom Academy and Outreach + Missions are churchwide funds. This
-is the direct consequence of the decision in §8 and is reversible by creating
-per-campus versions of those two funds. Per-campus giving reports will be off by
-this amount until then.
+**1. The finance team has been entering Overflow gifts by hand, and we found
+exactly where that stops.** This was the most consequential discovery of the day.
+MinistryPlatform contains 15 batches named "<date> Overflow" — **125 gifts,
+$17,773.24, running 21 May to 2 August 2026**.
 
-**South End's tithe traffic is going to the wrong fund in Overflow.** Overflow
+This mattered urgently, because the sync's duplicate protection works by reading
+the Overflow contribution ID stored on each donation it creates. A hand-entered
+donation has no such ID, so it is **invisible to that check**. Our first
+configuration would have started from 1 August and re-posted the 2 August batch —
+13 gifts, $1,192 — as duplicates against real donor records. The sync's start
+date is now set to 3 August, after the last manual batch.
+
+Two things follow from this:
+
+- **The manual cutoff must be confirmed with the finance team.** We inferred 2
+  August from batch contents. If anyone keys in gifts after that date, the sync's
+  start date has to move with it, or those gifts will post twice.
+- **Roughly $2,042 across 29 older gifts appears never to have been entered.**
+  Comparing all Overflow history against MinistryPlatform, 49 gifts look absent,
+  but only 20 fall after the cutoff. The other 29 predate it and should have been
+  keyed in but were not found. This is a heuristic comparison and needs
+  verification before anyone acts on it — but if it holds, it is giving that
+  never reached the church's books.
+
+**2. Ballantyne's books understate its giving.** Ballantyne generates the most
+gifts of any campus, but a substantial share books elsewhere. In the current
+window, **$535 of $1,768 — 7 of 20 gifts — books to a different campus than it
+was given at**, because Freedom Academy and Outreach + Missions are churchwide
+funds:
+
+| Campus | Given at | Books to |
+|---|---|---|
+| Central | 5 gifts, $750 | 9 gifts, $985 |
+| Ballantyne | 7 gifts, $460 | 2 gifts, $125 |
+| Lake Norman | 4 gifts, $288 | 4 gifts, $288 |
+| South End | 4 gifts, $270 | 3 gifts, $170 |
+| Offsite | — | 2 gifts, $200 |
+
+Ballantyne raises $460 and is credited with $125. This is the direct consequence
+of the decision in §8 and is reversible by creating per-campus versions of those
+two funds. Per-campus giving reports will be off by this amount until then.
+
+**3. South End's tithe traffic is going to the wrong fund in Overflow.** Overflow
 offers both a generic "General Fund (Tithe)" and a campus-specific "SE General
 Fund (Tithe)", and donors are almost entirely using the generic one. The sync
 routes both correctly, so no money is misplaced — but the duplicate options
 should be cleaned up in Overflow to reduce donor confusion. The same duplication
 exists for every campus.
 
-**Five likely duplicate people were caught before any data was written.** A
+**4. Five likely duplicate people were caught before any data was written.** A
 pre-flight check found five Overflow donors with the same name as an existing MP
 contact but a different email address; four also matched on phone number. Under
 the email-only rule these will be created as new contacts and need merging in MP.
@@ -210,7 +251,7 @@ Had we written data without checking, those five people would each have had two
 records with giving history split between them, which quietly breaks year-end
 contribution statements.
 
-**A second live integration already holds full admin rights.** The existing
+**5. A second live integration already holds full admin rights.** The existing
 `onlinegiving` service account carries the Administrators role. Not urgent and
 not something we changed, but worth knowing: the Overflow account was
 deliberately built to a much narrower permission set instead of repeating that
@@ -261,6 +302,8 @@ Please do not forward the URL and password outside this stakeholder group.
 
 | # | Item | Owner |
 |---|---|---|
+| 0 | **Confirm the manual-entry cutoff date (we infer 2 Aug 2026) and confirm manual entry has stopped.** Blocks going live — this is what prevents duplicate postings. | Finance |
+| 0b | **Verify whether ~$2,042 across 29 older gifts really is missing from MP** (§9, item 1) | Finance |
 | 1 | Review the preview and approve going live | Stakeholders |
 | 2 | Decide how Overflow processing fees should be represented, so batches and bank reconciliation can be built | Finance |
 | 3 | Decide whether Freedom Academy and Outreach + Missions should become per-campus funds (see §9) | Finance / campus pastors |
@@ -290,9 +333,11 @@ credential files were included.
 ### Note for the document designer
 
 - Lead with §1 and §2 — most readers need only those.
-- §9 is the section that should prompt discussion; give it visual weight.
+- §9 is the section that should prompt discussion; give it visual weight. Item 1
+  (manual entry and the cutoff date) is the most important thing in the document
+  after "nothing has been written yet".
 - §3 numbers work well as large figures. The Ballantyne comparison in §9
-  ($643 given vs $308 booked) is the single most useful chart on the page.
+  ($460 given vs $125 booked) is the single most useful chart on the page.
 - §12 is the call to action.
 - §5–§7 are appendix material; keep them but let them recede.
 - Please preserve the "nothing has been written yet" statement prominently — it

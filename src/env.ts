@@ -94,11 +94,19 @@ export const config = {
     return Number(optional('MP_HOUSEHOLD_SOURCE_ID', '38'));
   },
   /**
-   * Contributions before this date are ignored entirely. Overflow and
-   * OnlineGiving.org run in parallel, so this is the guard against back-filling
-   * gifts that were already posted to MP by another path.
+   * Contributions dated before this are ignored entirely.
+   *
+   * This is the single most important safety value in the project. Staff keyed
+   * Overflow gifts into MinistryPlatform by hand through **2026-08-02** — 15
+   * batches, 125 gifts, $17,773.24. Those donations carry no Overflow
+   * contribution id, so the sync's normal duplicate check cannot see them, and
+   * syncing any date on or before the cutoff would double-post real money to
+   * real donor records.
+   *
+   * Raise this only after confirming the team has stopped entering gifts by hand
+   * for the period concerned.
    */
   get syncFromDate() {
-    return optional('SYNC_FROM_DATE', '2026-08-01T00:00:00Z');
+    return optional('SYNC_FROM_DATE', '2026-08-03T00:00:00Z');
   },
 };

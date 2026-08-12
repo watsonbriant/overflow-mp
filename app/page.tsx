@@ -27,16 +27,21 @@ const utcDate = (iso: string) =>
     timeZone: 'UTC',
   });
 
+type Range = 'window' | 'lifetime';
+
 export default function Page() {
   const [plan, setPlan] = useState<Plan | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [range, setRange] = useState<Range>('window');
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (r: Range) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/plan', { cache: 'no-store' });
+      const res = await fetch(r === 'lifetime' ? '/api/plan?range=lifetime' : '/api/plan', {
+        cache: 'no-store',
+      });
       const body = await res.json();
       if (!res.ok) throw new Error(body?.error ?? `Request failed (${res.status})`);
       setPlan(body as Plan);
@@ -48,8 +53,8 @@ export default function Page() {
   }, []);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    void load(range);
+  }, [load, range]);
 
   return (
     <main className="mx-auto w-full max-w-6xl px-5 py-8 sm:px-8">
@@ -64,17 +69,47 @@ export default function Page() {
             Giving data that would transfer, pending approval to go live.
           </p>
         </div>
-        <button
-          onClick={() => void load()}
-          disabled={loading}
-          className="rounded-md border px-3 py-2 text-sm font-medium text-ink-2 transition-colors hover:text-ink disabled:opacity-50"
-          style={{ borderColor: 'var(--hairline)', background: 'var(--surface)' }}
-        >
-          {loading ? 'Loading…' : 'Refresh'}
-        </button>
+        <div className="flex items-center gap-2">
+          <div
+            className="flex rounded-md border p-0.5"
+            style={{ borderColor: 'var(--hairline)', background: 'var(--surface)' }}
+            role="group"
+            aria-label="Date range"
+          >
+            {(
+              [
+                ['window', 'Not yet in MP'],
+                ['lifetime', 'All Overflow history'],
+              ] as const
+            ).map(([value, label]) => (
+              <button
+                key={value}
+                onClick={() => setRange(value)}
+                disabled={loading}
+                aria-pressed={range === value}
+                className="rounded px-2.5 py-1.5 text-sm font-medium transition-colors disabled:opacity-50"
+                style={
+                  range === value
+                    ? { background: 'var(--series)', color: '#fff' }
+                    : { color: 'var(--ink-2)' }
+                }
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={() => void load(range)}
+            disabled={loading}
+            className="rounded-md border px-3 py-2 text-sm font-medium text-ink-2 transition-colors hover:text-ink disabled:opacity-50"
+            style={{ borderColor: 'var(--hairline)', background: 'var(--surface)' }}
+          >
+            {loading ? 'Loading…' : 'Refresh'}
+          </button>
+        </div>
       </header>
 
-      {error && <ErrorCard message={error} onRetry={() => void load()} />}
+      {error && <ErrorCard message={error} onRetry={() => void load(range)} />}
       {loading && !plan && <Skeleton />}
 
       {plan && (
@@ -131,9 +166,36 @@ function Headline({ plan }: { plan: Plan }) {
       <p className="mt-1 text-5xl font-semibold tracking-tight">{usd(toCreateAmount)}</p>
       <p className="mt-2 text-sm text-ink-2">
         across <span className="font-medium text-ink">{toCreate}</span>{' '}
-        {toCreate === 1 ? 'gift' : 'gifts'} confirmed in Overflow since{' '}
-        {utcDate(plan.syncFromDate)}
+        {toCreate === 1 ? 'gift' : 'gifts'} confirmed in Overflow
+        {plan.beyondSyncFloor ? ' across all history' : ` since ${utcDate(plan.from)}`}
       </p>
+
+      {plan.totals.alreadyHandEntered > 0 && (
+        <p className="mt-3 text-sm leading-relaxed text-ink-2">
+          A further{' '}
+          <span className="font-medium text-ink">
+            {usd(plan.totals.alreadyHandEnteredAmount)}
+          </span>{' '}
+          ({plan.totals.alreadyHandEntered} gifts) is <strong>already in
+          MinistryPlatform</strong>, entered by hand by the finance team, and is
+          excluded from the figure above so it cannot be posted twice.
+        </p>
+      )}
+
+      {plan.beyondSyncFloor && (
+        <p
+          className="mt-4 rounded-lg border p-3 text-xs leading-relaxed"
+          style={{ borderColor: 'var(--hairline)' }}
+        >
+          <span aria-hidden className="mr-1.5" style={{ color: 'var(--warning)' }}>
+            ▲
+          </span>
+          Showing <strong>all Overflow history</strong>, which reaches further back than
+          the sync itself would go. The sync will only ever consider gifts dated{' '}
+          {utcDate(plan.syncFromDate)} or later, because staff hand-entered everything
+          before that.
+        </p>
+      )}
     </Card>
   );
 }
@@ -145,7 +207,12 @@ function Kpis({ plan }: { plan: Plan }) {
     {
       label: 'Already in MinistryPlatform',
       value: String(t.alreadyInMp),
-      note: t.alreadyInMp > 0 ? 'skipped, never double-posted' : undefined,
+      note:
+        t.alreadyHandEntered > 0
+          ? `${t.alreadyHandEntered} keyed in by staff — skipped`
+          : t.alreadyInMp > 0
+            ? 'skipped, never double-posted'
+            : undefined,
     },
     {
       label: 'New people to create',
@@ -345,12 +412,18 @@ function StatusPill({ row }: { row: PlanRow }) {
     blocked: { color: 'var(--critical)', glyph: '▲', label: 'Blocked' },
   } as const;
   const s = map[row.action];
+  const label = row.skipReason === 'hand-entered' ? 'Keyed in by staff' : s.label;
   return (
-    <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
-      <span aria-hidden style={{ color: s.color }}>
-        {s.glyph}
+    <span className="inline-flex flex-col">
+      <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+        <span aria-hidden style={{ color: s.color }}>
+          {s.glyph}
+        </span>
+        <span className="text-ink-2">{label}</span>
       </span>
-      <span className="text-ink-2">{s.label}</span>
+      {row.existingBatchName && (
+        <span className="pl-4 text-xs text-ink-muted">{row.existingBatchName}</span>
+      )}
     </span>
   );
 }
