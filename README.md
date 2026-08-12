@@ -95,13 +95,17 @@ matched automatically, one (`Abigail Croom`) needs a human decision.
 The preview renders real donor names, email addresses, and gift amounts. It must
 never be openly reachable.
 
-`netlify/edge-functions/basic-auth.ts` gates the whole site behind HTTP Basic
-Auth on any Netlify plan. Required Netlify environment variables:
+`netlify/edge-functions/password-gate.ts` gates the whole site behind a
+single-password form, on any Netlify plan. Not Basic Auth — that always renders a
+username field the viewer has to guess at. Entering the password sets an
+HttpOnly/Secure cookie holding an HMAC derived from it, so the cookie cannot be
+forged without the password; it is recomputed and compared on every request.
+
+Required Netlify environment variables:
 
 | Key | Notes |
 |---|---|
 | `PREVIEW_PASSWORD` | the shared password; **required** — without it the site locks, not opens |
-| `PREVIEW_USER` | optional; any username is accepted when unset |
 | `MP_DOMAIN`, `MP_CLIENT_ID`, `MP_CLIENT_SECRET` | as in `.env` |
 | `OVERFLOW_BASE`, `OVERFLOW_CLIENT_ID`, `OVERFLOW_API_KEY` | as in `.env` |
 | `MP_HOUSEHOLD_SOURCE_ID`, `SYNC_FROM_DATE` | optional; sensible defaults in code |
