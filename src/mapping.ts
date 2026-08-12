@@ -1,4 +1,6 @@
-import { readFileSync } from 'node:fs';
+// Imported rather than read from disk: a bundled serverless function has no
+// reliable working directory, so fs+cwd works locally and 404s once deployed.
+import mappingFile from '../config/fund-mapping.json' with { type: 'json' };
 import { mp } from './mp.ts';
 import type { OverflowContribution } from './overflow.ts';
 
@@ -28,9 +30,7 @@ interface MappingFile {
   };
 }
 
-const mapping = JSON.parse(
-  readFileSync(new URL('../config/fund-mapping.json', import.meta.url).pathname, 'utf8'),
-) as MappingFile;
+const mapping = mappingFile as unknown as MappingFile;
 
 export const policy = mapping.syncPolicy;
 

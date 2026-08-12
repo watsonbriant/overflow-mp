@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 /**
  * Minimal .env reader. Deliberately does not eval/source the file — MP-generated
@@ -30,7 +31,15 @@ function readEnvFile(path: string): Record<string, string> {
   return out;
 }
 
-const fileEnv = readEnvFile(new URL('../.env', import.meta.url).pathname);
+/**
+ * Path is built at runtime, deliberately. `new URL('../.env', import.meta.url)`
+ * reads identically but bundlers statically resolve it as an asset reference,
+ * which makes the whole build fail when .env is absent — i.e. on every hosted
+ * deploy, where the values come from the platform's environment instead.
+ *
+ * Only needed for the CLI. Next.js loads .env into process.env on its own.
+ */
+const fileEnv = readEnvFile(join(process.cwd(), '.env'));
 
 function required(name: string): string {
   const v = process.env[name] ?? fileEnv[name];
@@ -42,30 +51,54 @@ function optional(name: string, fallback: string): string {
   return process.env[name] ?? fileEnv[name] ?? fallback;
 }
 
+/**
+ * Every required value is a getter, resolved on access rather than at import.
+ *
+ * This matters for hosted deploys: a build step that merely imports a module in
+ * this graph would otherwise throw before any request is served, turning a
+ * missing environment variable into an opaque build failure instead of a clear
+ * runtime error.
+ */
 export const config = {
   mp: {
-    domain: required('MP_DOMAIN'),
-    clientId: required('MP_CLIENT_ID'),
-    clientSecret: required('MP_CLIENT_SECRET'),
+    get domain() {
+      return required('MP_DOMAIN');
+    },
+    get clientId() {
+      return required('MP_CLIENT_ID');
+    },
+    get clientSecret() {
+      return required('MP_CLIENT_SECRET');
+    },
     get base() {
       return `https://${config.mp.domain}/ministryplatformapi`;
     },
     scope: 'http://www.thinkministry.com/dataplatform/scopes/all',
   },
   overflow: {
-    base: optional('OVERFLOW_BASE', 'https://server.overflow.co'),
-    clientId: required('OVERFLOW_CLIENT_ID'),
-    apiKey: required('OVERFLOW_API_KEY'),
+    get base() {
+      return optional('OVERFLOW_BASE', 'https://server.overflow.co');
+    },
+    get clientId() {
+      return required('OVERFLOW_CLIENT_ID');
+    },
+    get apiKey() {
+      return required('OVERFLOW_API_KEY');
+    },
   },
   /**
    * Household_Source_ID stamped on households the sync creates, so machine-made
    * records stay identifiable. 38 = "Overflow" (added 2026-08-12).
    */
-  householdSourceId: Number(optional('MP_HOUSEHOLD_SOURCE_ID', '38')),
+  get householdSourceId() {
+    return Number(optional('MP_HOUSEHOLD_SOURCE_ID', '38'));
+  },
   /**
    * Contributions before this date are ignored entirely. Overflow and
    * OnlineGiving.org run in parallel, so this is the guard against back-filling
    * gifts that were already posted to MP by another path.
    */
-  syncFromDate: optional('SYNC_FROM_DATE', '2026-08-01T00:00:00Z'),
+  get syncFromDate() {
+    return optional('SYNC_FROM_DATE', '2026-08-01T00:00:00Z');
+  },
 };

@@ -8,8 +8,8 @@
  * Lookups are batched: one query per table per chunk rather than three per gift,
  * which is the difference between a ~1s page and a ~12s one.
  */
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+// See mapping.ts — imported, not read from disk, so it survives bundling.
+import mappingFile from '../config/fund-mapping.json' with { type: 'json' };
 import { mp, sqlStr } from './mp.ts';
 import { overflow, type OverflowContribution } from './overflow.ts';
 import { MappingError, campaignCongregation, resolveFund, resolvePaymentType } from './mapping.ts';
@@ -84,11 +84,8 @@ export interface Plan {
   }[];
 }
 
-const mappingRaw = JSON.parse(
-  readFileSync(join(process.cwd(), 'config/fund-mapping.json'), 'utf8'),
-) as { paymentTypes: { names: Record<string, string> } };
-
-const paymentTypeNames = mappingRaw.paymentTypes.names ?? {};
+const paymentTypeNames = (mappingFile as { paymentTypes?: { names?: Record<string, string> } })
+  .paymentTypes?.names ?? {};
 
 const round = (n: number) => Math.round(n * 100) / 100;
 
