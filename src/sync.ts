@@ -173,6 +173,18 @@ function buildNotes(c: OverflowContribution): string {
     .join('\n');
 }
 
+/**
+ * Donations.Invoice_Number holds 25 characters. A prefix plus a 24-character
+ * Overflow id does not fit, so this keeps the id's end, which is the part that
+ * differs between gifts. Transaction_Code carries the full id.
+ */
+const INVOICE_NUMBER_MAX = 25;
+
+function invoiceNumber(overflowId: string): string {
+  const prefix = policy.invoiceNumberPrefix;
+  return prefix + overflowId.slice(-(INVOICE_NUMBER_MAX - prefix.length));
+}
+
 async function findDonationByOverflowId(overflowId: string): Promise<number | null> {
   const rows = await mp.select<{ Donation_ID: number }>(
     'Donations',
@@ -230,7 +242,7 @@ async function syncOne(c: OverflowContribution, dryRun: boolean): Promise<Outcom
     Processed: true,
     Currency: 'USD',
     Receipted: false,
-    Invoice_Number: `${policy.invoiceNumberPrefix}-${c.id}`,
+    Invoice_Number: invoiceNumber(c.id),
     Multiple_Donor_Match: false,
   };
 
