@@ -605,13 +605,64 @@ function StatusPill({ row }: { row: PlanRow }) {
   );
 }
 
+/** Local time, so a gift files under the month its displayed date shows. */
+const monthKey = (iso: string) => {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+};
+
+const monthLabel = (key: string) => {
+  const [year, month] = key.split('-').map(Number);
+  return new Date(year, month - 1).toLocaleDateString('en-US', {
+    month: 'long',
+    year: 'numeric',
+  });
+};
+
 function DetailTable({ rows }: { rows: PlanRow[] }) {
+  const [month, setMonth] = useState('all');
+
+  const newestFirst = [...rows].sort(
+    (a, b) => new Date(b.contributionDate).getTime() - new Date(a.contributionDate).getTime(),
+  );
+  const months = [...new Set(newestFirst.map((r) => monthKey(r.contributionDate)))];
+  // Switching range can remove the chosen month; fall back rather than show nothing.
+  const selected = months.includes(month) ? month : 'all';
+  const shown =
+    selected === 'all'
+      ? newestFirst
+      : newestFirst.filter((r) => monthKey(r.contributionDate) === selected);
+  const shownTotal = shown.reduce((sum, r) => sum + r.amount, 0);
+
   return (
     <Card className="overflow-hidden">
-      <h2 className="text-sm font-semibold">Every gift, line by line</h2>
-      <p className="mt-1 text-xs text-ink-2">
-        The Overflow fund on the left, the MinistryPlatform program it resolves to on the
-        right. &ldquo;New&rdquo; means no MP contact shares that email address.
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <h2 className="text-sm font-semibold">Every gift, line by line</h2>
+          <p className="mt-1 text-xs text-ink-2">
+            The Overflow fund on the left, the MinistryPlatform program it resolves to on the
+            right. &ldquo;New&rdquo; means no MP contact shares that email address.
+          </p>
+        </div>
+        <label className="flex items-center gap-2 text-xs text-ink-2">
+          Month
+          <select
+            value={selected}
+            onChange={(e) => setMonth(e.target.value)}
+            className="rounded-md border px-2.5 py-1.5 text-sm text-ink"
+            style={{ borderColor: 'var(--hairline)', background: 'var(--surface)' }}
+          >
+            <option value="all">All months</option>
+            {months.map((key) => (
+              <option key={key} value={key}>
+                {monthLabel(key)}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <p className="tnum mt-3 text-xs text-ink-muted">
+        {shown.length} {shown.length === 1 ? 'gift' : 'gifts'} · {usd(shownTotal)}, newest first
       </p>
       <div className="mt-4 -mx-5 overflow-x-auto px-5">
         <table className="w-full min-w-[58rem] text-sm">
@@ -628,7 +679,7 @@ function DetailTable({ rows }: { rows: PlanRow[] }) {
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
+            {shown.map((r) => (
               <tr key={r.overflowId} className="border-t" style={{ borderColor: 'var(--grid)' }}>
                 <td className="tnum py-2.5 pr-4 whitespace-nowrap text-ink-2">
                   {shortDate(r.contributionDate)}
