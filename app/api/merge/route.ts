@@ -2,6 +2,7 @@ import { NextResponse, after } from 'next/server';
 import { buildPlan } from '@/src/plan.ts';
 import { sync, type SyncResult } from '@/src/sync.ts';
 import { config } from '@/src/env.ts';
+import { isSameOrigin } from '@/src/same-origin.ts';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -57,8 +58,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   // The gate's cookie is SameSite=Lax, which already keeps it off cross-site
   // POSTs; this is a second check, since this request moves money.
-  const origin = request.headers.get('origin');
-  if (origin && origin !== new URL(request.url).origin) {
+  if (!isSameOrigin(request.headers)) {
     return NextResponse.json({ error: 'Cross-origin request refused.' }, { status: 403 });
   }
 
