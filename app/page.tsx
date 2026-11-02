@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 // Type-only import: erased at build, so no server code reaches the client bundle.
 import type { Plan, PlanRow } from '@/src/plan.ts';
+import type { MergeState } from '@/app/api/merge/route.ts';
 
 const usd = (n: number) =>
   n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 });
@@ -34,6 +35,7 @@ export default function Page() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [range, setRange] = useState<Range>('window');
+  const [merge, setMerge] = useState<MergeState | null>(null);
 
   const load = useCallback(async (r: Range) => {
     setLoading(true);
@@ -56,9 +58,47 @@ export default function Page() {
     void load(range);
   }, [load, range]);
 
+  const loadMerge = useCallback(async (): Promise<MergeState | null> => {
+    try {
+      const res = await fetch('/api/merge', { cache: 'no-store' });
+      const body = (await res.json()) as MergeState;
+      setMerge(body);
+      return body;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadMerge();
+  }, [loadMerge]);
+
+  // Poll while a merge runs, then re-read the plan so merged gifts move to
+  // "Already in MP".
+  useEffect(() => {
+    if (merge?.status !== 'running') return;
+    const timer = setInterval(async () => {
+      const next = await loadMerge();
+      if (next && next.status !== 'running') void load(range);
+    }, 2000);
+    return () => clearInterval(timer);
+  }, [merge?.status, loadMerge, load, range]);
+
+  const startMerge = useCallback(async () => {
+    const res = await fetch('/api/merge', { method: 'POST' });
+    const body = await res.json();
+    if (!res.ok) {
+      setError(body?.error ?? `Merge request failed (${res.status})`);
+      return;
+    }
+    setMerge(body as MergeState);
+  }, []);
+
+  const mergeEnabled = merge?.enabled ?? false;
+
   return (
     <main className="mx-auto w-full max-w-6xl px-5 py-8 sm:px-8">
-      <Banner />
+      <Banner mergeEnabled={mergeEnabled} />
 
       <header className="mt-6 flex flex-wrap items-end justify-between gap-4">
         <div>
@@ -66,7 +106,9 @@ export default function Page() {
             Overflow → MinistryPlatform
           </h1>
           <p className="mt-1 text-sm text-ink-2">
-            Giving data that would transfer, pending approval to go live.
+            {mergeEnabled
+              ? 'Giving data waiting to move from Overflow into MinistryPlatform.'
+              : 'Giving data that would transfer, pending approval to go live.'}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -115,6 +157,14 @@ export default function Page() {
       {plan && (
         <div className="mt-7 space-y-7">
           <Headline plan={plan} />
+          {mergeEnabled && range === 'window' && (
+            <MergePanel
+              plan={plan}
+              merge={merge!}
+              busy={loading}
+              onMerge={() => void startMerge()}
+            />
+          )}
           <Kpis plan={plan} />
           {plan.byCampus.length > 0 && <CampusChart plan={plan} />}
           {plan.byProgram.length > 0 && <FundTable plan={plan} />}
@@ -140,7 +190,24 @@ function Card({ children, className = '' }: { children: React.ReactNode; classNa
   );
 }
 
-function Banner() {
+function Banner({ mergeEnabled }: { mergeEnabled: boolean }) {
+  if (mergeEnabled) {
+    return (
+      <div
+        className="flex items-start gap-3 rounded-xl border p-4"
+        style={{ borderColor: 'var(--hairline)', background: 'var(--series-wash)' }}
+      >
+        <span aria-hidden className="mt-0.5 text-base leading-none">
+          🔍
+        </span>
+        <p className="text-sm leading-relaxed">
+          <strong className="font-semibold">Nothing moves until you press Merge.</strong>{' '}
+          This page reads both systems and shows what is waiting. Merging writes those
+          gifts, and any new people, into MinistryPlatform.
+        </p>
+      </div>
+    );
+  }
   return (
     <div
       className="flex items-start gap-3 rounded-xl border p-4"
@@ -195,6 +262,116 @@ function Headline({ plan }: { plan: Plan }) {
           {utcDate(plan.syncFromDate)} or later, because staff hand-entered everything
           before that.
         </p>
+      )}
+    </Card>
+  );
+}
+
+function MergePanel({
+  plan,
+  merge,
+  busy,
+  onMerge,
+}: {
+  plan: Plan;
+  merge: MergeState;
+  busy: boolean;
+  onMerge: () => void;
+}) {
+  const { toCreate, toCreateAmount, newContacts } = plan.totals;
+  const running = merge.status === 'running';
+  const r = merge.result;
+
+  const confirmAndMerge = () => {
+    const ok = window.confirm(
+      `Merge ${toCreate} ${toCreate === 1 ? 'gift' : 'gifts'} (${usd(toCreateAmount)}) into ` +
+        `MinistryPlatform?\n\nThis writes real donations` +
+        (newContacts > 0 ? ` and creates ${newContacts} new people` : '') +
+        `. It cannot be undone from this page.`,
+    );
+    if (ok) onMerge();
+  };
+
+  return (
+    <Card>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h2 className="text-sm font-semibold">Merge into MinistryPlatform</h2>
+          <p className="mt-1 text-xs text-ink-2">
+            {running
+              ? merge.total > 0
+                ? `Merging… ${merge.done} of ${merge.total} gifts`
+                : 'Merging… checking what is waiting'
+              : toCreate === 0
+                ? 'Everything is already in MinistryPlatform.'
+                : `Moves the ${toCreate} ${toCreate === 1 ? 'gift' : 'gifts'} above, and creates any new people. Gifts already in MP are never posted twice.`}
+          </p>
+        </div>
+        <button
+          onClick={confirmAndMerge}
+          disabled={running || busy || toCreate === 0}
+          className="rounded-md px-4 py-2 text-sm font-semibold transition-opacity disabled:opacity-50"
+          style={{ background: 'var(--series)', color: '#fff' }}
+        >
+          {running ? 'Merging…' : `Merge ${toCreate} ${toCreate === 1 ? 'gift' : 'gifts'}`}
+        </button>
+      </div>
+
+      {running && merge.total > 0 && (
+        <div className="mt-4 h-2 overflow-hidden rounded-sm" style={{ background: 'var(--grid)' }}>
+          <div
+            className="h-2 transition-[width] duration-500"
+            style={{
+              width: `${(merge.done / merge.total) * 100}%`,
+              background: 'var(--series)',
+            }}
+          />
+        </div>
+      )}
+
+      {!running && merge.finishedAt && (
+        <div
+          className="mt-4 rounded-lg border p-3 text-sm leading-relaxed"
+          style={{ borderColor: merge.status === 'failed' ? 'var(--critical)' : 'var(--hairline)' }}
+        >
+          <p>
+            <span
+              aria-hidden
+              className="mr-1.5"
+              style={{ color: merge.status === 'failed' ? 'var(--critical)' : 'var(--good)' }}
+            >
+              {merge.status === 'failed' ? '▲' : '✓'}
+            </span>
+            <strong className="font-semibold">
+              {merge.status === 'failed' ? 'Merge finished with problems' : 'Merge complete'}
+            </strong>{' '}
+            <span className="text-ink-2">
+              · {new Date(merge.finishedAt).toLocaleString('en-US')}
+            </span>
+          </p>
+          {r && (
+            <p className="mt-1 text-ink-2">
+              {r.created} merged · {r.skipped} already in MP · {r.repaired} repaired ·{' '}
+              {r.failed.length} failed
+            </p>
+          )}
+          {merge.error && <p className="mt-1 text-ink-2">{merge.error}</p>}
+          {r && r.failed.length > 0 && (
+            <ul className="mt-2 space-y-1.5 text-xs text-ink-2">
+              {r.failed.map((f) => (
+                <li key={f.id}>
+                  <span className="tnum text-ink-muted">{f.id}</span> — {f.reason}
+                </li>
+              ))}
+            </ul>
+          )}
+          {merge.status === 'failed' && (
+            <p className="mt-2 text-xs text-ink-2">
+              Gifts that failed were not written. Fix the cause and press Merge again —
+              anything already merged is skipped.
+            </p>
+          )}
+        </div>
       )}
     </Card>
   );
