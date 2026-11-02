@@ -32,9 +32,10 @@ Overflow's `campaign` is the **campus**; `subcampaign` is the **fund**.
 
 MinistryPlatform has no campus on a donation. Campus is encoded in the
 **Program**, which carries its own `Congregation_ID`. So funds are keyed on
-**(campaign + subcampaign)** → `Program_ID`, never subcampaign alone: four
+**(campaign + subcampaign)** → `Program_ID`, never subcampaign alone: five
 subcampaign ids (`General Fund (Tithe)`, `Liberty`, `Outreach + Missions`,
-`Freedom Academy`) are reused verbatim across all four campuses.
+`Freedom Academy`, `Turkey Offering ($25)`) are reused verbatim across all four
+campuses.
 
 | Campus | Congregation | Tithe | Kingdom Builders | Liberty |
 |---|---|---|---|---|
@@ -46,6 +47,10 @@ subcampaign ids (`General Fund (Tithe)`, `Liberty`, `Outreach + Missions`,
 `Freedom Academy` → 32 and `Outreach + Missions` → 55 are single churchwide
 programs by decision (2026-08-12); campus attribution is intentionally not
 preserved for those two.
+
+`Turkey Offering ($25)` → each campus's Thanksgiving Turkeys program (Central
+166, Lake Norman 168, South End 169). Ballantyne has none, so by decision
+(2026-11-02) its gifts go to South End's 169.
 
 Full table with ids: `config/fund-mapping.json`.
 
@@ -120,6 +125,41 @@ are invisible locally, both already fixed, worth not reintroducing:
 - Read `config/fund-mapping.json` via a JSON **import**, not `fs` + `cwd`. A
   bundled serverless function has no reliable working directory.
 
+## Hosting the preview (Azure App Service)
+
+A second copy of the same preview runs on Azure App Service (Linux, Node 24).
+Netlify's edge function does not exist there, so `proxy.ts` carries the same gate
+as Next.js Proxy: same cookie, token, and login form, and the same fail-closed
+behavior. On Netlify both run, and they agree.
+
+```bash
+brew install azure-cli && az login
+scripts/azure-deploy.sh --setup   # first time: resource group, B1 plan, web app, settings
+scripts/azure-deploy.sh           # every later deploy
+```
+
+`--setup` pushes every key in `.env` to the app's settings. Add `PREVIEW_PASSWORD`
+to `.env` first, or set it in the portal afterwards. Until it is set, the site
+stays locked. `next build` copies `.env` into `.next/standalone`; the script
+deletes it and refuses to upload a package that still contains one.
+
+## The Merge button
+
+With `MERGE_ENABLED=true` the preview shows a **Merge** button that runs the sync
+from the site (`app/api/merge/route.ts`). It merges exactly the gifts the preview
+lists as "will transfer", so gifts the preview found were keyed in by hand are
+never re-posted. It runs after the response is sent and the page polls for
+progress, because Azure drops any request open longer than about 230 seconds.
+
+**Turn it on only on Azure.** The lock that stops two merges at once lives in
+server memory, which only holds on one long-lived server. On Netlify, requests
+can land on separate instances, so two merges could race and double-post, and a
+function timeout could cut a run off partway through a gift. Unset means the
+button is hidden and the endpoint refuses (403).
+
+The web merge does not move the CLI's watermark. That is harmless: the CLI's
+duplicate check skips anything the button already merged.
+
 ## Not yet implemented: batches and deposits
 
 Contributions post with `Batch_ID: null`, matching how OnlineGiving.org
@@ -144,6 +184,7 @@ src/overflow.ts            Overflow client, pagination
 src/mapping.ts             fund + payment type resolution, program validation
 src/sync.ts                contact → donor → donation → distribution
 src/cli.ts                 entry point, watermark
+app/api/merge/route.ts     the Merge button: runs the sync from the site (MERGE_ENABLED)
 src/audit-contacts.ts      duplicate-person pre-flight
 scripts/mp.sh              ad-hoc read:  ./scripts/mp.sh '/tables/Donations?$top=1'
 scripts/of.sh              ad-hoc read:  ./scripts/of.sh '/api/v3/campaigns'

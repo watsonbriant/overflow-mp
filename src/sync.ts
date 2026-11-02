@@ -8,6 +8,14 @@ export interface SyncOptions {
   since: string;
   /** Stop after N contributions. Useful for a cautious first live run. */
   limit?: number;
+  /**
+   * Process only these Overflow contribution ids. The web Merge button passes
+   * exactly the gifts the preview listed as "will transfer", so hand-entered
+   * gifts the preview detected are never re-posted.
+   */
+  onlyIds?: ReadonlySet<string>;
+  /** Called after each contribution, for progress reporting. */
+  onProgress?: (done: number, total: number) => void;
 }
 
 export interface SyncResult {
@@ -268,6 +276,10 @@ export async function sync(opts: SyncOptions): Promise<SyncResult> {
     log(`  ignored ${dropped} contribution(s) dated before SYNC_FROM_DATE (${config.syncFromDate})`);
   }
 
+  if (opts.onlyIds) {
+    const only = opts.onlyIds;
+    contributions = contributions.filter((c) => only.has(c.id));
+  }
   if (opts.limit !== undefined) contributions = contributions.slice(0, opts.limit);
   log(`  ${contributions.length} confirmed contribution(s) to process\n`);
   if (contributions.length === 0) return result;
@@ -297,6 +309,7 @@ export async function sync(opts: SyncOptions): Promise<SyncResult> {
       result.failed.push({ id: c.id, reason });
       log(`  ✗  ${label}\n       ${reason}`);
     }
+    opts.onProgress?.(result.considered, contributions.length);
   }
 
   return result;

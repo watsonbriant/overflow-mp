@@ -35,7 +35,7 @@ const mapping = mappingFile as unknown as MappingFile;
 export const policy = mapping.syncPolicy;
 
 /**
- * Keyed on campaign AND subcampaign: four subcampaign ids are reused verbatim
+ * Keyed on campaign AND subcampaign: five subcampaign ids are reused verbatim
  * across all four campuses, so subcampaign alone cannot identify a fund.
  */
 const fundIndex = new Map<string, FundRow>(
