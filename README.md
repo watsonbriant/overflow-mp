@@ -32,25 +32,28 @@ Overflow's `campaign` is the **campus**; `subcampaign` is the **fund**.
 
 MinistryPlatform has no campus on a donation. Campus is encoded in the
 **Program**, which carries its own `Congregation_ID`. So funds are keyed on
-**(campaign + subcampaign)** → `Program_ID`, never subcampaign alone: five
+**(campaign + subcampaign)** → `Program_ID`, never subcampaign alone: six
 subcampaign ids (`General Fund (Tithe)`, `Liberty`, `Outreach + Missions`,
-`Freedom Academy`, `Turkey Offering ($25)`) are reused verbatim across all four
-campuses.
+`Freedom Academy`, `Turkey Offering ($25)`, `Lodge Expansion`) are reused
+verbatim across all four campuses.
 
-| Campus | Congregation | Tithe | Kingdom Builders | Liberty |
-|---|---|---|---|---|
-| Central | 1 | 6 | 195 | 209 |
-| South End | 5 | 81 | 198 | 210 |
-| Lake Norman | 4 | 50 | 196 | 211 |
-| Ballantyne | 7 | 213 | 199 | 215 |
+| Campus | Congregation | Tithe | Kingdom Builders | Liberty | Turkeys | Lodge Expansion |
+|---|---|---|---|---|---|---|
+| Central | 1 | 6 | 195 | 209 | 166 | 226 |
+| South End | 5 | 81 | 198 | 210 | 169 | 227 |
+| Lake Norman | 4 | 50 | 196 | 211 | 168 | 228 |
+| Ballantyne | 7 | 213 | 199 | 215 | 225 | 229 |
 
 `Freedom Academy` → 32 and `Outreach + Missions` → 55 are single churchwide
 programs by decision (2026-08-12); campus attribution is intentionally not
 preserved for those two.
 
-`Turkey Offering ($25)` → each campus's Thanksgiving Turkeys program (Central
-166, Lake Norman 168, South End 169). Ballantyne has none, so by decision
-(2026-11-02) its gifts go to South End's 169.
+`Turkey Offering ($25)` → each campus's Thanksgiving Turkeys program.
+Ballantyne's gifts went to South End's 169 from 2026-11-02 until its own program
+(225) was created; they map to 225 as of 2026-11-17. Gifts already posted to
+169 stay there; only gifts not yet synced go to 225.
+
+`Lodge Expansion` → one program per campus (226–229), added 2026-11-17.
 
 Full table with ids: `config/fund-mapping.json`.
 
